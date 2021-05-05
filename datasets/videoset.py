@@ -49,7 +49,7 @@ class VideoSet(torch.utils.data.Dataset):
         self.in_fps = cfg.DATA.IN_FPS
         self.out_fps = cfg.DATA.OUT_FPS
         self.step_size = int(self.in_fps / self.out_fps)
-
+        self.stride_size = cfg.DATA.NUM_FRAMES # cfg.DATA.STRIDE_SIZE
         self.out_size = cfg.DATA.NUM_FRAMES
 
         if isinstance(cfg.DATA.SAMPLE_SIZE, list):
@@ -62,6 +62,11 @@ class VideoSet(torch.utils.data.Dataset):
             )
 
         self.frames = self._get_frames()
+        if self.read_vid_file:
+            orgin_frame_num = self.frames.shape[1]
+        else:
+            orgin_frame_num = len(self.frames)
+        self.start_frames= list(range(0, orgin_frame_num, self.stride_size * self.step_size))
 
     def _get_frames(self):
         """
@@ -187,8 +192,10 @@ class VideoSet(torch.utils.data.Dataset):
             )
         ).float()
 
-        start = int(index - self.step_size * self.out_size / 2)
-        end = int(index + self.step_size * self.out_size / 2)
+#         start = int(index - self.step_size * self.out_size / 2)
+#         end = int(index + self.step_size * self.out_size / 2)
+        start = int(self.start_frames[index])
+        end = int(self.start_frames[index] + self.step_size * self.out_size)
         max_ind = self.__len__() - 1
 
         for out_ind, ind in enumerate(range(start, end, self.step_size)):
@@ -213,7 +220,4 @@ class VideoSet(torch.utils.data.Dataset):
             (int): the number of frames in the video.
         """
         # return self.video_container.streams.video[0].frames
-        if self.read_vid_file:
-            return self.frames.shape[1]
-        else:
-            return len(self.frames)
+        return len(self.start_frames)
